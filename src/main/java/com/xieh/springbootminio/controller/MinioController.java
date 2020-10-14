@@ -75,7 +75,7 @@ public class MinioController {
         //存入bucket不存在则创建，并设置为只读
         if (!minioClient.bucketExists(minioProperties.getBucketName())) {
             minioClient.makeBucket(minioProperties.getBucketName());
-            //minioClient.setBucketPolicy(BUCKETNAME, "*.*", PolicyType.READ_ONLY);
+            //minioClient.setBucketPolicy(minioProperties.getBucketName(), "*.*", PolicyType.READ_ONLY);
         }
 
         List<String> orgfileNameList = new ArrayList<>(file.length);
@@ -167,6 +167,44 @@ public class MinioController {
         }
         return res;
     }
+
+
+    /**
+     * 生成可以预览的文件链接
+     * @return
+     * @throws XmlParserException
+     * @throws NoSuchAlgorithmException
+     * @throws InsufficientDataException
+     * @throws InternalException
+     * @throws InvalidResponseException
+     * @throws InvalidKeyException
+     * @throws InvalidBucketNameException
+     * @throws ErrorResponseException
+     * @throws IOException
+     * @throws InvalidExpiresRangeException
+     */
+    @GetMapping("/previewList")
+    public List<Object> getPreviewList() throws XmlParserException, NoSuchAlgorithmException, InsufficientDataException, InternalException, InvalidResponseException, InvalidKeyException, InvalidBucketNameException, ErrorResponseException, IOException, InvalidExpiresRangeException {
+        Iterable<Result<Item>> myObjects = minioClient.listObjects(minioProperties.getBucketName());
+        Iterator<Result<Item>> iterator = myObjects.iterator();
+        List<Object> items = new ArrayList<>();
+        String format = "{'fileName':'%s'}";
+        while (iterator.hasNext()) {
+            Item item = iterator.next().get();
+            System.out.println("item.objectName():" + item.objectName());
+            // TODO 根据文件后缀名，过滤哪些是可以预览的文件
+            //String bucketName, 桶名称
+            // String objectName, 文件路径
+            // Integer expires, 链接过期时间
+            // Map<String, String> reqParams 请求参数
+            // 开始生成
+            String filePath = minioClient.presignedGetObject(minioProperties.getBucketName(), item.objectName());
+            items.add(JSON.parse(String.format(format, filePath)));
+        }
+        return  items;
+    }
+
+
 
     /**
      * 显示文件大小信息单位

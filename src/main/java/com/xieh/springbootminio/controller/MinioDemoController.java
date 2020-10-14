@@ -1,7 +1,11 @@
 package com.xieh.springbootminio.controller;
 
+import com.alibaba.fastjson.JSON;
 import io.minio.MinioClient;
 import io.minio.PutObjectOptions;
+import io.minio.Result;
+import io.minio.errors.*;
+import io.minio.messages.Item;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,12 +14,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLEncoder;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author 谢辉
@@ -123,5 +129,48 @@ public class MinioDemoController {
             LOGGER.info("导出失败：", ex.getMessage());
         }
     }
+
+
+
+
+    /**
+     * 生成可以预览的文件链接
+     * @return
+     * @throws XmlParserException
+     * @throws NoSuchAlgorithmException
+     * @throws InsufficientDataException
+     * @throws InternalException
+     * @throws InvalidResponseException
+     * @throws InvalidKeyException
+     * @throws InvalidBucketNameException
+     * @throws ErrorResponseException
+     * @throws IOException
+     * @throws InvalidExpiresRangeException
+     */
+    @GetMapping("/demoPreviewList")
+    public List<Object> getPreviewList() throws XmlParserException, NoSuchAlgorithmException, InsufficientDataException, InternalException, InvalidResponseException, InvalidKeyException, InvalidBucketNameException, ErrorResponseException, IOException, InvalidExpiresRangeException, InvalidPortException, InvalidEndpointException {
+        MinioClient minioClient = new MinioClient(ENDPOINT, ACCESSKEY, SECRETKEY);
+        Iterable<Result<Item>> myObjects = minioClient.listObjects(BUCKETNAME);
+        Iterator<Result<Item>> iterator = myObjects.iterator();
+        List<Object> items = new ArrayList<>();
+        String format = "{'fileName':'%s'}";
+        while (iterator.hasNext()) {
+            Item item = iterator.next().get();
+            System.out.println("item.objectName():" + item.objectName());
+            // TODO 根据文件后缀名，过滤哪些是可以预览的文件
+            //String bucketName, 桶名称
+            // String objectName, 文件路径
+            // Integer expires, 链接过期时间
+            // Map<String, String> reqParams 请求参数
+            // 开始生成
+            String filePath = minioClient.presignedGetObject(BUCKETNAME, item.objectName());
+            items.add(JSON.parse(String.format(format, filePath)));
+        }
+        return  items;
+    }
+
+
+
+
 }
 
