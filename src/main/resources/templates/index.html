@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8"/>
+    <title>图片列表</title>
+    <link rel="stylesheet" href="http://cdn.staticfile.org/element-ui/2.13.1/theme-chalk/index.css">
+</head>
+<body>
+
+<div id="app">
+
+    <el-link icon="el-icon-upload" href="/upload.html">上传图片</el-link>
+    <br/>
+
+    <el-table :data="results" stripe style="width: 60%" @row-click="preview">
+        <el-table-column type="index" width="50"></el-table-column>
+        <el-table-column prop="fileName" label="文件名" width="180"></el-table-column>
+        <el-table-column prop="fileSize" label="文件大小"></el-table-column>
+        <el-table-column label="操作">
+            <template slot-scope="scope">
+                <a :href="'/minio/download/?fileName=' + scope.row.fileName + ''" class="el-icon-download">下载</a>
+                <a :href="'/minio/delete/?fileName=' + scope.row.fileName + ''" @click.prevent="deleteFile($event,scope.$index,results)"
+                   class="el-icon-delete">删除</a>
+            </template>
+        </el-table-column>
+    </el-table>
+
+    <br/>
+    <el-link icon="el-icon-picture">预览图片</el-link>
+    <br/>
+    <div class="demo-image__preview" v-if="previewImg">
+        <el-image style="width: 100px; height: 100px" :src="imgSrc" :preview-src-list="imgList"></el-image>
+    </div>
+
+</div>
+
+<script src="http://cdn.staticfile.org/vue/2.6.11/vue.min.js"></script>
+<script src="http://cdn.staticfile.org/axios/0.19.2/axios.min.js"></script>
+<script src="http://cdn.staticfile.org/element-ui/2.13.1/index.js"></script>
+
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            bucketURL: 'http://127.0.0.1:9000/xieh/',
+            previewImg: true,
+            results: [],
+            imgSrc: '',
+            imgList: []
+        },
+        methods: {
+            init() {
+                axios.get('/minio/list').then(response => {
+                    this.results = response.data;
+                    if (this.results.length == 0) {
+                        this.imgSrc = '';
+                        this.previewImg = false;
+                    } else {
+                        for (var i = 0; i < this.results.length; i++) {
+                            this.imgList.push(this.bucketURL + this.results[i].fileName);
+                            if (i == 0) {
+                                this.imgSrc = this.bucketURL + this.results[0].fileName;
+                            }
+                        }
+                    }
+                });
+            },
+            preview(row, event, column) {
+                this.imgSrc = this.bucketURL + row.fileName;
+                this.previewImg = true;
+            },
+            deleteFile(e,index,list) {
+                axios.delete(e.target.href, {}).then(res => {
+                    if (res.data.code == 200) {
+                        this.$message('删除成功！');
+                        list.splice(index, 1);
+                        this.previewImg = false;
+                    } else {
+                        this.$message('删除失败！');
+                    }
+                });
+            }
+        },
+        mounted() {
+            this.init();
+        }
+    });
+</script>
+
+</body>
+</html>
